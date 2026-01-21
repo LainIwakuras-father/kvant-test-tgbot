@@ -54,7 +54,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 }
 
 // BroadcastMessage отправляет сообщение всем пользователям
-func (h *MessageHandler) BroadcastMessage(c *gin.Context) {
+func (h *MessageHandler) BroadcastMessage(c *gin.Context, ) {
     var req models.BroadcastMessageRequest
     
     if err := c.ShouldBindJSON(&req); err != nil {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 	
-	// bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/handlers"
+	bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/handlers"
 	api_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/handlers"
 
 
@@ -14,11 +14,37 @@ import (
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/middleware"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/service"
 	
-	// "github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	"github.com/LainIwakuras-father/kvant-test-tgbot/docs"
+	swaggerFiles "github.com/swaggo/files"
+    ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// main.go или создай файл docs.go в корне проекта
+
+// @title           ValentinkaBot API
+// @version         1.0
+// @description     API для Valentinka Telegram-бота. Позволяет отправлять сообщения пользователям и делать рассылки.
+// @termsOfService  https://example.com/terms/
+
+// @contact.name    API Support
+// @contact.url     https://example.com/support
+// @contact.email   support@example.com
+
+// @license.name    MIT
+// @license.url     https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /
+// @schemes   http https
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name X-Secret-Key
 
 func main() {
 	// Загружаем .env файл
@@ -44,7 +70,7 @@ func main() {
 	db := storage.NewMemoryStorage()
 
 	// ЗАПУСКАЕМ БОТА В ГОРУТИНЕ
-	// go runTelegramBot(telegramAdapter,db)
+	go runTelegramBot(telegramAdapter,db)
 
 	// Инициализация сервиса сообщений для API
 	messageSvc := service.NewMessageService(telegramAdapter, db)
@@ -63,6 +89,9 @@ func main() {
 
 	// Настройка роутера
 	router := gin.Default()
+	// Swagger документация
+	docs.SwaggerInfo.BasePath = "/"
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Публичные маршруты (без аутентификации)
 	router.GET("/", func(c *gin.Context) {
@@ -121,44 +150,44 @@ func main() {
 	}
 }
 
-// // runTelegramBot запускает Telegram бота в отдельной горутине
-// func runTelegramBot(bot interfaces.IBot, db interfaces.IStorage) {
+// runTelegramBot запускает Telegram бота в отдельной горутине
+func runTelegramBot(bot interfaces.IBot, db interfaces.IStorage) {
 
-// 	handler_bot := bot_handlers.NewHandler(bot,db)
-// 	// Запускаем прослушивание обновлений
-// 	updates := bot.ListenUpdates()
-// 	log.Println(" Бот запущен и ожидает сообщения...")
+	handler_bot := bot_handlers.NewHandler(bot,db)
+	// Запускаем прослушивание обновлений
+	updates := bot.ListenUpdates()
+	log.Println(" Бот запущен и ожидает сообщения...")
 
-// 	for update := range updates {
-// 		if update.Message == nil {
-// 			continue
-// 		}
+	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
 
-// 		chatID := update.Message.Chat.ID
-// 		userID := update.Message.From.ID
-// 		username := update.Message.From.UserName
+		chatID := update.Message.Chat.ID
+		userID := update.Message.From.ID
+		username := update.Message.From.UserName
 
-// 		// Сохраняем пользователя
+		// Сохраняем пользователя
 	
 		
 
-// 		// Обработка команд
-// 		if update.Message.IsCommand() {
-// 			switch update.Message.Command() {
-// 			case "start":
-// 				handler_bot.HandleStart(username,chatID)
-// 			default:
-// 				// Можно добавить обработку неизвестных команд
-// 				if err := bot.SendMessage(chatID, "Неизвестная команда. Используй /start"); err != nil {
-// 					log.Printf("Ошибка отправки: %v", err)
-// 				}
-// 			}
-// 			continue
-// 		}
+		// Обработка команд
+		if update.Message.IsCommand() {
+			switch update.Message.Command() {
+			case "start":
+				handler_bot.HandleStart(username,chatID)
+			default:
+				// Можно добавить обработку неизвестных команд
+				if err := bot.SendMessage(chatID, "Неизвестная команда. Используй /start"); err != nil {
+					log.Printf("Ошибка отправки: %v", err)
+				}
+			}
+			continue
+		}
 
-// 		// Обработка обычных сообщений
-// 		if update.Message.Text != "" {
-//             handler_bot.HandleTextMessage(userID, chatID, update.Message.Text)
-//         }
-// 	}
-// }
+		// Обработка обычных сообщений
+		if update.Message.Text != "" {
+            handler_bot.HandleTextMessage(userID, chatID, update.Message.Text)
+        }
+	}
+}
