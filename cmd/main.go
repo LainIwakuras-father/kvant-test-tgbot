@@ -1,19 +1,22 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	
-	bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/handlers"
+	"os/signal"
+	"syscall"
+	"time"
+
 	api_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/handlers"
+	bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/handlers"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/pkg/logger"
 
-
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/adapter"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/middleware"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/service"
-	
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/adapter"
+
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/storage"
 	"github.com/gin-gonic/gin"
@@ -21,10 +24,9 @@ import (
 
 	"github.com/LainIwakuras-father/kvant-test-tgbot/docs"
 	swaggerFiles "github.com/swaggo/files"
-    ginSwagger "github.com/swaggo/gin-swagger"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/sirupsen/logrus"
 )
-
-// main.go или создай файл docs.go в корне проекта
 
 // @title           ValentinkaBot API
 // @version         1.0
@@ -47,48 +49,105 @@ import (
 // @name X-Secret-Key
 
 func main() {
+	// Инициализация логгера
+	logger.Init()
+
+	// Создаем логгеры для модулей
+	apiLogger := logger.NewModuleLogger("api")
+	botLogger := logger.NewModuleLogger("bot")
+	storageLogger := logger.NewModuleLogger("storage")
+
+	// Создаем контекст
+	ctx := context.Background()
+	
 	// Загружаем .env файл
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Warning: .env file not found: %v", err)
+		apiLogger.Warn("Warning: .env file not found")
 	}
 
 	// Получаем токен бота
 	botToken := os.Getenv("BOT_TOKEN")
 	if botToken == "" {
-		log.Fatal("BOT_TOKEN environment variable is required")
+		apiLogger.WithField("variable", "BOT_TOKEN").Fatal("Required environment variable is missing")
 	}
 
-	// Инициализация Telegram адаптера
-	telegramAdapter, err := adapter.NewTelegramAdapter(botToken)
+	// Инициализация Telegram адаптера с логгером
+	apiLogger.Info("Initializing Telegram adapter")
+	telegramAdapter, err := adapter.NewTelegramAdapter(botToken, botLogger)
 	if err != nil {
-		log.Fatalf("Failed to create Telegram adapter: %v", err)
+		apiLogger.WithError(err).Fatal("Failed to create Telegram adapter")
 	}
 
-	log.Printf("Bot authorized as @%s", telegramAdapter.GetBotUsername())
+	botUsername := telegramAdapter.GetBotUsername()
+	apiLogger.WithFields(logrus.Fields{
+		"username": botUsername,
+		
+	}).Info("Bot authorized successfully")
 
-	// Инициализация хранилища в памяти (ОБЩЕЕ для бота и API)
-	db := storage.NewMemoryStorage()
+	// Инициализация хранилища с логгером
+	apiLogger.Info("Initializing storage")
+	db := storage.NewMemoryStorage(storageLogger)
 
-	// ЗАПУСКАЕМ БОТА В ГОРУТИНЕ
-	go runTelegramBot(telegramAdapter,db)
+	// Запускаем бота в горутине с контекстом
+	botErrChan := make(chan error, 1)
+	botCtx := logger.NewContextWithLogger(ctx, botLogger)
+	go runTelegramBot(botCtx, telegramAdapter, db, botErrChan)
 
 	// Инициализация сервиса сообщений для API
-	messageSvc := service.NewMessageService(telegramAdapter, db)
+	apiLogger.Info("Initializing message service")
+	messageSvc := service.NewMessageService(telegramAdapter, db, apiLogger)
 
-	
-	secret_key := os.Getenv("SECRET_KEY")
-	if secret_key == "" {
-		log.Fatal("SECRET_KEY environment variable is required")
+	// Получаем секретный ключ
+	secretKey := os.Getenv("SECRET_KEY")
+	if secretKey == "" {
+		apiLogger.WithField("variable", "SECRET_KEY").Fatal("Required environment variable is missing")
 	}
+
 	// Инициализация middleware для проверки secret_key
-	secretKeyMiddleware:= middleware.NewAuthMiddleware(secret_key)
-	
+	apiLogger.Info("Initializing auth middleware")
+	secretKeyMiddleware := middleware.NewAuthMiddleware(secretKey, apiLogger)
 
 	// Инициализация обработчиков API
-	messageHandler := api_handlers.NewMessageHandler(messageSvc)
+	apiLogger.Info("Initializing API handlers")
+	messageHandler := api_handlers.NewMessageHandler(messageSvc, apiLogger)
 
 	// Настройка роутера
 	router := gin.Default()
+	
+	// Middleware для логирования запросов
+	router.Use(func(c *gin.Context) {
+		start := time.Now()
+		
+		// Создаем request_id
+		requestID := fmt.Sprintf("%d", time.Now().UnixNano())
+		
+		// Создаем логгер для этого запроса
+		log := apiLogger.WithFields(logrus.Fields{
+			"request_id": requestID,
+			"method":     c.Request.Method,
+			"path":       c.Request.URL.Path,
+			"ip":         c.ClientIP(),
+		})
+		
+		// Обновляем контекст
+		ctx := logger.NewContextWithLogger(c.Request.Context(), log)
+		c.Request = c.Request.WithContext(ctx)
+		
+		// Логируем начало запроса
+		log.Info("Request started")
+		
+		// Обрабатываем запрос
+		c.Next()
+		
+		// Логируем завершение
+		duration := time.Since(start)
+		log.WithFields(logrus.Fields{
+			"status":   c.Writer.Status(),
+			"duration": duration.String(),
+			"size":     c.Writer.Size(),
+		}).Info("Request completed")
+	})
+
 	// Swagger документация
 	docs.SwaggerInfo.BasePath = "/"
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -111,6 +170,8 @@ func main() {
 		// Проверяем состояние бота
 		count, err := db.GetAllUsers(c.Request.Context())
 		if err != nil {
+			log := logger.FromContext(c.Request.Context())
+			log.WithError(err).Error("Failed to get users count")
 			c.JSON(500, gin.H{"status": "error", "error": err.Error()})
 			return
 		}
@@ -119,6 +180,7 @@ func main() {
 			"status":      "ok",
 			"bot":         "running",
 			"users_count": count,
+			"timestamp":   time.Now().UTC(),
 		})
 	})
 
@@ -131,32 +193,69 @@ func main() {
 		
 		// Рассылка сообщения всем пользователям
 		api.POST("/send/broadcast", messageHandler.BroadcastMessage)
-		
 	}
 
-	// Запуск HTTP сервера
+	// Настройка и запуск HTTP сервера с graceful shutdown
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	
 	addr := fmt.Sprintf(":%s", port)
-	log.Printf(" Starting API server on http://localhost:%s",port)
-	log.Printf(" Bot running in background: @%s", telegramAdapter.GetBotUsername())
-	log.Printf(" API protected with secret_key")
-	
-	if err := http.ListenAndServe(addr, router); err != nil {
-		log.Fatal("Server failed:", err)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: router,
 	}
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Запуск сервера в отдельной горутине
+	go func() {
+		apiLogger.WithFields(logrus.Fields{
+			"port":    port,
+			"address": "http://localhost:" + port,
+			"bot":     botUsername,
+		}).Info("Starting API server")
+		
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			apiLogger.WithError(err).Fatal("Server failed to start")
+		}
+	}()
+
+	// Ожидание сигнала завершения
+	<-quit
+	apiLogger.Info("Shutting down server...")
+	
+	// Создаем контекст с таймаутом для graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		apiLogger.WithError(err).Error("Server forced to shutdown")
+	}
+	
+	apiLogger.Info("Server exited properly")
 }
 
 // runTelegramBot запускает Telegram бота в отдельной горутине
-func runTelegramBot(bot interfaces.IBot, db interfaces.IStorage) {
+func runTelegramBot(ctx context.Context, bot interfaces.IBot, db interfaces.IStorage, errChan chan<- error) {
+	log := logger.FromContext(ctx)
+	
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithField("recover", r).Error("Bot panicked")
+			errChan <- fmt.Errorf("bot panic: %v", r)
+		}
+	}()
 
-	handler_bot := bot_handlers.NewHandler(bot,db)
+	// Создаем handler с логгером
+	handlerBot := bot_handlers.NewHandler(bot, db, log)
+	
 	// Запускаем прослушивание обновлений
 	updates := bot.ListenUpdates()
-	log.Println(" Бот запущен и ожидает сообщения...")
+	log.Info("Bot started and waiting for messages...")
 
 	for update := range updates {
 		if update.Message == nil {
@@ -167,19 +266,28 @@ func runTelegramBot(bot interfaces.IBot, db interfaces.IStorage) {
 		userID := update.Message.From.ID
 		username := update.Message.From.UserName
 
-		// Сохраняем пользователя
-	
-		
+		// Создаем контекст для этого сообщения
+		msgCtx := logger.WithFields(ctx, logrus.Fields{
+			"user_id":   userID,
+			"chat_id":   chatID,
+			"username":  username,
+		})
 
 		// Обработка команд
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
-				handler_bot.HandleStart(username,chatID)
+				handlerBot.HandleStart(msgCtx, username, chatID)
 			default:
-				// Можно добавить обработку неизвестных команд
-				if err := bot.SendMessage(chatID, "Неизвестная команда. Используй /start"); err != nil {
-					log.Printf("Ошибка отправки: %v", err)
+				// Обработка неизвестных команд
+				log.WithFields(logrus.Fields{
+					"command": update.Message.Command(),
+					"user_id": userID,
+					"chat_id": chatID,
+				}).Warn("Unknown command received")
+				
+				if err := bot.SendMessage(msgCtx, chatID, "Неизвестная команда. Используй /start"); err != nil {
+					log.WithError(err).Error("Failed to send unknown command response")
 				}
 			}
 			continue
@@ -187,7 +295,10 @@ func runTelegramBot(bot interfaces.IBot, db interfaces.IStorage) {
 
 		// Обработка обычных сообщений
 		if update.Message.Text != "" {
-            handler_bot.HandleTextMessage(userID, chatID, update.Message.Text)
-        }
+			handlerBot.HandleTextMessage(msgCtx, userID, chatID, update.Message.Text)
+		}
 	}
+	
+	// Если цикл завершился (канал закрыт), отправляем ошибку
+	errChan <- fmt.Errorf("updates channel closed")
 }

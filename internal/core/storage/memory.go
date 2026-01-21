@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/models"
+	"github.com/sirupsen/logrus"
 )
 
 // MemoryStorage - временное хранилище в памяти
@@ -14,16 +15,25 @@ type MemoryStorage struct {
 	messages map[string]*models.Message
 	users map[int64]string
 	mu sync.RWMutex
+	logger *logrus.Entry
 }
 
-func NewMemoryStorage() *MemoryStorage {
+func NewMemoryStorage(logger *logrus.Entry) *MemoryStorage {
 	return &MemoryStorage{
 		messages: make(map[string]*models.Message),
 		users: make(map[int64]string),
+		logger: logger,
 	}
 }
 
-func (m *MemoryStorage) Save(userID int64, chatID int64, text string) (string, error) {
+func (m *MemoryStorage) Save(ctx context.Context, userID int64, chatID int64, text string) error {
+
+	select {
+	case <-ctx.Done():
+		m.logger.WithField("user_id", userID).Warn("Context canceled while saving user")
+		return ctx.Err()
+	default:
+	}
 	// Генерируем уникальный ID
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -36,11 +46,17 @@ func (m *MemoryStorage) Save(userID int64, chatID int64, text string) (string, e
 	}
 
 	m.messages[generatedID] = msg
-	return generatedID, nil
+	m.logger.WithFields(logrus.Fields{
+		"user_id":     userID,
+		"total_users": len(m.users),
+	}).Debug("User saved")
+	return  nil
 
 }
 
 func (m *MemoryStorage) Count() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	return len(m.messages)
 }
 
@@ -61,6 +77,13 @@ func (m *MemoryStorage) UserExists(ctx context.Context, chatID int64) (bool,erro
 }
 
 func (m *MemoryStorage) GetAllUsers(ctx context.Context) (map[int64]string,error) {
+	select {
+	case <-ctx.Done():
+		m.logger.Warn("Context canceled while getting users")
+		return nil, ctx.Err()
+	default:
+	}
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	

@@ -25,7 +25,7 @@
 - **Docker** `1.24.2+` — [Скачать](https://docs.docker.com/desktop/)
 
 ### Backend (Локальная разработка)
-- **Go** `1.24.2+` — [Скачать](https://go.dev/dl/)
+- **Go** `1.25.5+` — [Скачать](https://go.dev/dl/)
 
 
 ## 📚 Документация

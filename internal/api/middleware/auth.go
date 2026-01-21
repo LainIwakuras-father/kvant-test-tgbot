@@ -1,19 +1,20 @@
 package middleware
 
 import (
-
 	"github.com/gin-gonic/gin"
-	
+	"github.com/sirupsen/logrus"
 )
 
 
 type AuthMiddlewareSecretKey struct {
 	secretKey string
+	logger *logrus.Entry
 }
 
-func NewAuthMiddleware(secretKey string) *AuthMiddlewareSecretKey {
+func NewAuthMiddleware(secretKey string, logger *logrus.Entry) *AuthMiddlewareSecretKey {
 	return &AuthMiddlewareSecretKey{
 		secretKey: secretKey,
+		logger:    logger,
 	}
 }
 

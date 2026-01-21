@@ -1,24 +1,32 @@
 package service
-import(
+
+import (
 	"context"
-	"log"
 	"fmt"
+	"log"
+
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
-	 
+	"github.com/sirupsen/logrus"
 )
 
 type MessageService struct{
 	bot 	interfaces.IBot
 	storage interfaces.IStorage
+    logger *logrus.Entry
 }
 
-func NewMessageService(bot interfaces.IBot, storage interfaces.IStorage) *MessageService {
+func NewMessageService(bot interfaces.IBot, storage interfaces.IStorage, logger *logrus.Entry) *MessageService {
     return &MessageService{
         bot:     bot,
         storage: storage,
+        logger:  logger,
     }
 }
 func (s *MessageService) SendMessage(ctx context.Context, chatID int64, message string) error {
+    s.logger.WithFields(logrus.Fields{
+		"user_id": chatID,
+		"message": message,
+	}).Info("Sending message to user")
     // Проверяем, существует ли пользователь
     exists, err := s.storage.UserExists(ctx, chatID)
     if err != nil {
@@ -30,7 +38,7 @@ func (s *MessageService) SendMessage(ctx context.Context, chatID int64, message 
     }
     
     // Отправляем сообщение через бота
-    if err := s.bot.SendMessage(chatID, message); err != nil {
+    if err := s.bot.SendMessage(ctx, chatID, message); err != nil {
         return fmt.Errorf("failed to send message: %w", err)
     }
     
@@ -50,7 +58,7 @@ func (s *MessageService) BroadcastMessage(ctx context.Context, message string) (
     
     // Отправляем сообщение каждому пользователю
     for id,_ := range users {
-        if err := s.bot.SendMessage(id, message); err != nil {
+        if err := s.bot.SendMessage(ctx,id, message); err != nil {
             log.Printf("Failed to send message to chat_id %d: %v", id, err)
             continue
         }

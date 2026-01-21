@@ -2,20 +2,24 @@
 package handlers_api
 
 import (
-    "net/http"
-    "strconv"
-    "github.com/gin-gonic/gin"
-    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
-    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/models"
+	"net/http"
+	"strconv"
+
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/models"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type MessageHandler struct {
     messageService interfaces.IMessageService
+    logger *logrus.Entry
 }
 
-func NewMessageHandler(messageService interfaces.IMessageService) *MessageHandler {
+func NewMessageHandler(messageService interfaces.IMessageService, logger *logrus.Entry) *MessageHandler {
     return &MessageHandler{
         messageService: messageService,
+        logger:         logger,
     }
 }
 
