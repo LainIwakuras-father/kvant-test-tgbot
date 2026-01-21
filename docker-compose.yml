@@ -1,0 +1,26 @@
+
+services:
+ # ============ Development Service ============
+  kvant-bot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: kvant-bot-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "2345:2345"      # Delve debugger порт
+      - "40000:40000"    # Air порт
+    volumes:
+      - ./:/app
+      - go-mod-cache:/go/pkg/mod
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./src
+          target: /app/src
+    command: air -c .air.toml
+volumes:
+  go-mod-cache:
