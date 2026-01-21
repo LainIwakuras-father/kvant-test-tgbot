@@ -23,5 +23,7 @@ services:
           path: ./src
           target: /app/src
     command: air -c .air.toml
+    environment:
+      - GIN_MODE=release
 volumes:
   go-mod-cache:
