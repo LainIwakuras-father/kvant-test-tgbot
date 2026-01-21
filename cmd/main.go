@@ -1,22 +1,20 @@
 package main
 
 import (
-	
 	"log"
 	"log/slog"
-	
+
 	"os"
 
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api"
-	
+
+
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot"
 
-	
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/adapter"
 
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/config"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/storage"
-	"github.com/joho/godotenv"
-
 	
 )
 
@@ -48,23 +46,14 @@ func main() {
 	})
 	slog.SetDefault(slog.New(handler))
 
-
-	// Загружаем .env файл
-	if err := godotenv.Load(); err != nil {
-		slog.Warn("Не найден или не загрузился .env файл", "error", err)
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("Ошибка загрузки конфигурации", "err", err)
+		os.Exit(1)
 	}
-
-	// переменные окружения
-	botToken := os.Getenv("BOT_TOKEN")
-	if botToken == "" {
-		log.Fatal("BOT_TOKEN environment variable is required")
-	}
-	secret_key := os.Getenv("SECRET_KEY")
-	if secret_key == "" {
-		log.Fatal("SECRET_KEY environment variable is required")
-	}
+	
 	// Инициализация Telegram адаптера
-	telegramAdapter, err := adapter.NewTelegramAdapter(botToken)
+	telegramAdapter, err := adapter.NewTelegramAdapter(cfg.BotToken)
 	if err != nil {
 		log.Fatalf("Failed to create Telegram adapter: %v", err)
 	}
@@ -80,7 +69,7 @@ func main() {
 	
 
 	//Запускаем http сервер 
-	if err := api.StartServer(telegramAdapter, db, secret_key); err != nil {
+	if err := api.StartServer(telegramAdapter, db, cfg.SecretKey); err != nil {
 		slog.Error("Ошибка запуска API сервера", "err", err)
 		os.Exit(1)
 	}
