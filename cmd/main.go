@@ -6,16 +6,16 @@ import (
 	"net/http"
 	"os"
 	
-	bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/handlers"
+	bot_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/handlers"
 	api_handlers "github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/handlers"
 
 
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/adapter"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/bot/adapter"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/middleware"
 	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/service"
 	
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/storage"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/storage"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 

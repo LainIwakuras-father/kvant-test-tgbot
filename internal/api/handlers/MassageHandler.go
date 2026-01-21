@@ -5,8 +5,8 @@ import (
     "net/http"
     "strconv"
     "github.com/gin-gonic/gin"
-    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
-    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/api/models"
+    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
+    "github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/models"
 )
 
 type MessageHandler struct {

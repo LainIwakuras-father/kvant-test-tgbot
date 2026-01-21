@@ -3,7 +3,7 @@ import(
 	"context"
 	"log"
 	"fmt"
-	 "github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
 	 
 )
 
