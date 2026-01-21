@@ -4,8 +4,7 @@ import (
 	"log"
 	"strconv"
 
-	
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/interfaces"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/interfaces"
 )
 
 // поменять на интерфейсы

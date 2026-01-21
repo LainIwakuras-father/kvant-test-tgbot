@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"sync"
 
-	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/models"
+	"github.com/LainIwakuras-father/kvant-test-tgbot/internal/core/models"
 )
 
 // MemoryStorage - временное хранилище в памяти
