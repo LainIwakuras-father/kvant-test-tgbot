@@ -85,7 +85,7 @@ func main() {
 			c.JSON(500, gin.H{"status": "error", "error": err.Error()})
 			return
 		}
-		log.Printf("ЧИСЛО ЮЗЕРОВ  %s", len(count))
+		
 		c.JSON(200, gin.H{
 			"status":      "ok",
 			"bot":         "running",

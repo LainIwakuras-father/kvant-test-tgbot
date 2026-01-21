@@ -11,6 +11,7 @@ services:
     env_file:
       - .env
     ports:
+      - "8080:80" # http api
       - "2345:2345"      # Delve debugger порт
       - "40000:40000"    # Air порт
     volumes:
