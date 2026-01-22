@@ -31,10 +31,10 @@ func (h *Handler) HandleStart(username string, chatID int64) {
 
 
 	text := `Привествую Друг!
-Я бот сохраняющий и отправляющий твои сообщения кому либо!
-Напиши Юзернейм или ID пользователя и текст который хочешь ему отправить
-Формат:
-9038487587 Привет, Друг!
+Я бот сохраняющий и отправляющий  сообщения через api http://localhost:8080/ !
+формат api {"chat_id": chat_id, "message": "your message", }
+
+я сохранил твой chat_id: ` + strconv.FormatInt(chatID, 10) + `
 	`
 	if err := h.adapter.SendMessage(chatID, text); err != nil {
 		log.Printf("Ошибка отправки /start: %v", err)
