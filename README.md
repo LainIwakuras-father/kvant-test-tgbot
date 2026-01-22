@@ -88,3 +88,7 @@ docker-compose up -d
 ### 🎉 Готово! Приложение запущено и готово к работе
 
 ## как оно выгладет
+- телеграм бот
+![telagram](./docs/1.png)
+-http api
+![http_api](./docs/2.png)
