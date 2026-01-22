@@ -6,11 +6,9 @@ package interfaces
 
 import (
     "context"
-    // "github.com/LainIwakuras-father/ValentinkaBot/internal/models"
 )
 type IMessageService interface {
     SendMessage(ctx context.Context, chatID int64, message string) error
     BroadcastMessage(ctx context.Context, message string) (int, int, error) // отправлено, всего, ошибка
-    // GetAllUsers(ctx context.Context) ([]models.User, error)
-    // GetUserCount(ctx context.Context) (int, error)
+    
 }

@@ -17,7 +17,7 @@ func NewTelegramAdapter(botToken string) (*TelegramAdapter, error) {
 		return nil, err
 	}
 
-	bot.Debug = true
+	bot.Debug = false
 	log.Printf("Бот авторизован: %s", bot.Self.UserName)
 
 	return &TelegramAdapter{
