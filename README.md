@@ -90,5 +90,5 @@ docker-compose up -d
 ## как оно выгладет
 - телеграм бот
 ![telagram](./docs/1.png)
--http api
+- http api
 ![http_api](./docs/2.png)
