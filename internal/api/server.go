@@ -23,6 +23,7 @@ func StartServer(
 	bot interfaces.IBot, 
 	db interfaces.IStorage, 
 	secretKey string,
+	apiLogger *slog.Logger,
 	) error {
 // Инициализация сервиса сообщений для API
 	messageSvc := service.NewMessageService(bot, db)

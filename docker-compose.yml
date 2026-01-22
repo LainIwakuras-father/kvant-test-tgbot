@@ -1,6 +1,5 @@
 
 services:
- # ============ Development Service ============
   kvant-bot-dev:
     build:
       context: .
@@ -17,12 +16,12 @@ services:
     volumes:
       - ./:/app
       - go-mod-cache:/go/pkg/mod
-    develop:
-      watch:
-        - action: sync+restart
-          path: ./src
-          target: /app/src
-    command: air -c .air.toml
+    # develop:
+    #   watch:
+    #     - action: sync+restart
+    #       path: ./src
+    #       target: /app/src
+    # command: air -c .air.toml
     environment:
       - GIN_MODE=release
 volumes:

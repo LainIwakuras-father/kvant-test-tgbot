@@ -20,9 +20,9 @@ import (
 
 // main.go или создай файл docs.go в корне проекта
 
-// @title           ValentinkaBot API
+// @title           Peresilka API + Telegram Bot
 // @version         1.0
-// @description     API для Valentinka Telegram-бота. Позволяет отправлять сообщения пользователям и делать рассылки.
+// @description     API + BOT tg
 // @termsOfService  https://example.com/terms/
 
 // @contact.name    API Support
@@ -41,10 +41,13 @@ import (
 // @name X-Secret-Key
 
 func main() {
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})
 	slog.SetDefault(slog.New(handler))
+
+	apiLogger := config.NewLogger(config.ComponentAPI)
+	botLogger := config.NewLogger(config.ComponentBot)
 
 	cfg, err := config.Load()
 	if err != nil {
@@ -64,12 +67,12 @@ func main() {
 	db := storage.NewMemoryStorage()
 
 	// ЗАПУСКАЕМ БОТА В ГОРУТИНЕ на фоне
-	go bot.Run(telegramAdapter, db)
+	go bot.Run(telegramAdapter, db, botLogger)
 	
 	
 
 	//Запускаем http сервер 
-	if err := api.StartServer(telegramAdapter, db, cfg.SecretKey); err != nil {
+	if err := api.StartServer(telegramAdapter, db, cfg.SecretKey, apiLogger); err != nil {
 		slog.Error("Ошибка запуска API сервера", "err", err)
 		os.Exit(1)
 	}

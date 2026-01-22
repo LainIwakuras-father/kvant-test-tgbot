@@ -1,7 +1,6 @@
-# syntax=docker/dockerfile:1.8
 
-# ==================== Dev Stage ====================
-FROM golang:1.25-alpine AS dev
+# ==================== Base Stage ====================
+FROM golang:1.25-alpine AS base
 
 WORKDIR /app
 
@@ -11,17 +10,17 @@ RUN apk add --no-cache \
     bash \
     curl \
     make
+# Копирование файлов зависимостей
+COPY go.mod go.sum ./
+RUN go mod download
+# Копирование исходного кода
+COPY . .
+# ==================== Development Stage ====================
+FROM base AS dev
 
 # Установка стабильной версии air, совместимой с Go 1.24
 RUN go install github.com/air-verse/air@latest && \
     go install github.com/go-delve/delve/cmd/dlv@latest
-
-# Копирование файлов зависимостей
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Копирование исходного кода
-COPY . .
 
 # Создание точки для дебаггера
 EXPOSE 40000 2345
