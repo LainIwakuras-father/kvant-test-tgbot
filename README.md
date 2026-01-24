@@ -65,10 +65,11 @@
 ```env
 BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 SECRET_KEY=super-secret-token-2026
-PORT=8080
+PORT=80
 DEBUG=true
 ```
 3. Запустить через Docker 
+4. для запуска локально поменяйте PORT=8080 в файле
 
 ```bash
 docker-compose up -d 
